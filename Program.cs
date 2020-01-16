@@ -83,7 +83,7 @@ namespace CalendarMessenger
             //
             // Get all events that occur today.
             //
-            IList<Occurrence> occurrences = calendars.GetOccurrences(DateTime.Today.AddDays(1), DateTime.Today.AddDays(300));
+            IList<Occurrence> occurrences = calendars.GetOccurrences(DateTime.Today.AddDays(1), DateTime.Today.AddDays(2));
 
             Console.WriteLine("Today's Events:");
 
