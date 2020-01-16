@@ -76,6 +76,10 @@ namespace CalendarMessenger
 
         static void ShowBalloon()
         {
+            if (text == "")
+            {
+                DoCalendarStuff();
+            }
             if (text != "")
             {
                 lock (notifyIcon)
@@ -89,18 +93,15 @@ namespace CalendarMessenger
 
         static void DoCalendarStuff()
         {
-            // Load the calendar file
             IICalendarCollection calendars = iCalendar.LoadFromFile(@"a.ics");
 
-            // Get all events that occur today.
+            // Termine in den nächsten 2 Tagen finden. Wenn gefunden: Alarmicon!
             IList<Occurrence> occurrences = calendars.GetOccurrences(DateTime.Today.AddDays(1), DateTime.Today.AddDays(2));
-
-            // Iterate through each occurrence and display information about it
             foreach (Occurrence occurrence in occurrences)
             {
                 DateTime occurrenceTime = occurrence.Period.StartTime.Local;
                 if (occurrence.Source is IRecurringComponent rc)
-                {
+                {   
                     if (CheckMessage(rc.Summary, occurrenceTime))
                     {
                         text += rc.Summary + ": " + occurrenceTime.ToShortDateString() + CRLF;
@@ -108,6 +109,8 @@ namespace CalendarMessenger
                     
                 }
             }
+
+            // Wenn Termine gefunden, dann Alarmicon. Sonst den Nächstbesten suchen, aber keinen Alarm und kein Balloon.
             if (text != "")
             {
                 lock (notifyIcon)
@@ -118,7 +121,21 @@ namespace CalendarMessenger
             }
             else
             {
-                text = "Kein Müll!";
+                // Wenn keine Termime in den nächsten 2 Tagen anliegen, dann den nächsten suchen, aber Icon nicht setzen und 
+                // Balloon nicht auslösen
+                occurrences = calendars.GetOccurrences(DateTime.Today.AddDays(3), DateTime.Today.AddDays(365));
+                foreach (Occurrence occurrence in occurrences)
+                {
+                    DateTime occurrenceTime = occurrence.Period.StartTime.Local;
+                    if (occurrence.Source is IRecurringComponent rc)
+                    {
+                        if (CheckMessage(rc.Summary, occurrenceTime))
+                        {
+                            text = "Nächster: " + rc.Summary + ": " + occurrenceTime.ToShortDateString() + CRLF;
+                            break;
+                        }
+                    }
+                }
             }
         }
 
