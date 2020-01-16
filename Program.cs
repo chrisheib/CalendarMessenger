@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -15,30 +16,37 @@ namespace CalendarMessenger
         static readonly string CRLF = Environment.NewLine;
         static NotifyIcon notifyIcon;
         static Thread thread;
+        static string text = "";
+        static Icon iconAchtung;
+        static Icon iconNormal;
         /// <summary>
         /// Der Haupteinstiegspunkt für die Anwendung.
         /// </summary>
         [STAThread]
         static void Main()
         {
+            PrepareIcons();
+
             var menu = new ContextMenu();
+
             var mnuExit = new MenuItem("Exit");
+            mnuExit.Click += new EventHandler(MnuExit_Click);
             menu.MenuItems.Add(0, mnuExit);
 
             notifyIcon = new NotifyIcon()
             {
-                Icon = new Icon(SystemIcons.Application, 40, 40),
+                Icon = iconNormal,
                 ContextMenu = menu,
-                Text = "Main"
+                Text = "Main",
+                Visible = true
             };
-            mnuExit.Click += new EventHandler(MnuExit_Click);
 
-            notifyIcon.Visible = true;
+            notifyIcon.Click += new EventHandler(NotifyIcon_Click);
 
             thread = new Thread(delegate ()
-            {
-                DoCalendarStuff();
-            }
+                {
+                    DoCalendarStuff();
+                }
             );
 
             thread.Start();
@@ -52,42 +60,41 @@ namespace CalendarMessenger
             Exit();
         }
 
+        static void NotifyIcon_Click(object sender, EventArgs e)
+        {
+            if (((MouseEventArgs)e).Button == MouseButtons.Left)
+            {
+                ShowBalloon();
+            }
+        }
+
         static void Exit()
         {
             notifyIcon.Dispose();
             Application.Exit();
         }
 
-
-        static void ShowBalloon(NotifyIcon icon, string title, string body)
+        static void ShowBalloon()
         {
-            if (title != null)
+            if (text != "")
             {
-                icon.BalloonTipTitle = title;
+                lock (notifyIcon)
+                {
+                    notifyIcon.BalloonTipTitle = "Müll";
+                    notifyIcon.BalloonTipText = text;
+                    notifyIcon.ShowBalloonTip(30000);
+                }
             }
-
-            if (body != null)
-            {
-                icon.BalloonTipText = body;
-            }
-
-            icon.ShowBalloonTip(30000);
         }
 
         static void DoCalendarStuff()
         {
-
             // Load the calendar file
             IICalendarCollection calendars = iCalendar.LoadFromFile(@"a.ics");
 
-            //
             // Get all events that occur today.
-            //
             IList<Occurrence> occurrences = calendars.GetOccurrences(DateTime.Today.AddDays(1), DateTime.Today.AddDays(2));
 
-            Console.WriteLine("Today's Events:");
-
-            var text = "";
             // Iterate through each occurrence and display information about it
             foreach (Occurrence occurrence in occurrences)
             {
@@ -105,11 +112,14 @@ namespace CalendarMessenger
             {
                 lock (notifyIcon)
                 {
-                    ShowBalloon(notifyIcon, "Müll!", text);
+                    notifyIcon.Icon = iconAchtung;
+                    ShowBalloon();
                 }
-                Thread.Sleep(30000);
             }
-            Exit();
+            else
+            {
+                text = "Kein Müll!";
+            }
         }
 
         static bool CheckMessage(String s, DateTime d)
@@ -130,6 +140,12 @@ namespace CalendarMessenger
             }
 
             return b;
+        }
+
+        static void PrepareIcons()
+        {
+            iconNormal = Properties.Resources.icons8_clock_32;
+            iconAchtung = Properties.Resources.icons8_clock_alert_32;
         }
     }
 }
